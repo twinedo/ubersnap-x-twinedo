@@ -8,7 +8,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import Footer from "@/components/ui/footer";
 import noImage from '@/assets/no-image.svg';
 import icDefault from '@/assets/ic-default.png';
-import cv, { ImageData, Mat } from "@techstark/opencv-js"
+import cv from "@techstark/opencv-js"
 import { TFilterItem } from "./page.type";
 import { blurImage, brightening } from "@/lib/utils";
 
@@ -129,7 +129,7 @@ export default function Home() {
     cropImage();
   };
 
-  // Function to crop the image using OpenCV.js
+  // Function to crop
   const cropImage = () => {
     if (!cropRect || !imageRef.current || !canvasRef.current) return;
 
@@ -147,13 +147,8 @@ export default function Home() {
       Math.abs(cropRect.height)
     );
 
-    // Apply the ROI (Region of Interest) to crop the image
     let cropped = mat.roi(rect);
-
-    // Display the cropped image on the canvas
     cv.imshow(canvas, cropped);
-
-    // Clean up
     cropped.delete();
     mat.delete();
   };
@@ -165,15 +160,35 @@ export default function Home() {
     setIsCrop(checked)
   }
 
+  // Function to download
+  const downloadImage = () => {
+    if (!canvasRef.current) return;
+    const dataURL = canvasRef.current.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = dataURL;
+    link.download = 'ubersnap-'+Date().toString()+'.png'; // File name for download
+    link.click();
+  };
+
 
   return (
     <>
       <Label className="text-bold">Welcome to Ubersnap</Label>
       <div className="flex flex-col w-full lg:max-w-sm justify-center gap-1.5">
         <Label htmlFor="canvasInput">Select Image</Label>
-        <div className="flex flex-col w-full lg:max-w-sm justify-center my-4">
-          <Input id="canvasInput" type="file" placeholder="" onChange={onImageAttach} className="opacity-0 w-[300px] h-[300px] absolute text-white" aria-label="" />
-          <Image id="imageSrc" ref={imageRef} src={imageInputSource.length === 0 ? noImage : imageInputSource} alt="input-img" width={300} height={300} className="rounded-xl self-center" onLoad={handleImageLoad} />
+        <div 
+          className="flex flex-col w-full lg:max-w-sm justify-center my-4">
+          <Input id="canvasInput" type="file" placeholder="" onChange={onImageAttach} className="opacity-0 w-[300px] h-[300px] absolute text-white" />
+          <Image 
+            id="imageSrc" 
+            ref={imageRef} 
+            src={imageInputSource.length === 0 ? noImage : imageInputSource} 
+            alt="input-img" 
+            width={300} 
+            height={300} 
+            className="rounded-xl self-center" 
+            onLoad={handleImageLoad} 
+          />
         </div>
         <Button variant='outline' onClick={onNextButton}>Next →</Button>
       </div>
@@ -227,7 +242,7 @@ export default function Home() {
           </div>
           <div className="flex flex-row gap-2 w-full">
             <Button variant='outline' className="flex flex-1" onClick={() => setCurrentPage('default')}>← Back</Button>
-            <Button variant='default' className="flex flex-1">Submit</Button>
+            <Button variant='default' className="flex flex-1" onClick={downloadImage}>Submit</Button>
           </div>
         </div>
       )}
