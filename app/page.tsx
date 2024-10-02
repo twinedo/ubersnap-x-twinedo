@@ -60,7 +60,7 @@ export default function Home() {
 
   const handleImageLoad = useCallback(() => {
     if (imageInputSource.length > 0 && imageRef.current && canvasRef.current) {
-      let mat = cv.imread(imageRef.current);  // Get the image from the img tag
+      const mat = cv.imread(imageRef.current);  // Get the image from the img tag
       cv.imshow(canvasRef.current, mat);  // Show the image on the canvas
       mat.delete();
     }
@@ -75,8 +75,8 @@ export default function Home() {
 
   // Apply Effect
   const onChangeEffect = (item: TFilterItem) => {
-    let mat = cv.imread(canvasRef.current!);
-    let dst = new cv.Mat();
+    const mat = cv.imread(canvasRef.current!);
+    const dst = new cv.Mat();
 
     // Reset to default
     if (selectedFilter === item.effect) {
@@ -145,17 +145,17 @@ export default function Home() {
     const canvas = canvasRef.current;
 
     // Read the image into OpenCV matrix
-    let mat = cv.imread(imgElement);
+    const mat = cv.imread(imgElement);
 
     // Create a rectangle for cropping
-    let rect = new cv.Rect(
+    const rect = new cv.Rect(
       Math.max(0, cropRect.x),
       Math.max(0, cropRect.y),
       Math.abs(cropRect.width),
       Math.abs(cropRect.height)
     );
 
-    let cropped = mat.roi(rect);
+    const cropped = mat.roi(rect);
     cv.imshow(canvas, cropped);
     cropped.delete();
     mat.delete();
