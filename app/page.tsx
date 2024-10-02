@@ -184,6 +184,7 @@ export default function Home() {
             className="opacity-0 w-[300px] h-[300px] absolute" 
             />
           <Image 
+            priority
             id="imageSrc" 
             ref={imageRef} 
             src={imageInputSource.length === 0 ? noImage : imageInputSource} 
@@ -201,7 +202,7 @@ export default function Home() {
       {currentPage === 'edit' && (
         <div className="flex flex-col w-full lg:max-w-sm justify-center gap-1.5 relative">
           <Label htmlFor="canvasInput">Preview Image</Label>
-          <div className="flex flex-col w-full lg:max-w-sm justify-center my-4 relative">
+          <div className="flex flex-col w-full lg:max-w-sm justify-center md:my-4 relative">
             <canvas
               id="canvasOutput"
               ref={canvasRef}
