@@ -166,10 +166,9 @@ export default function Home() {
     const dataURL = canvasRef.current.toDataURL('image/png');
     const link = document.createElement('a');
     link.href = dataURL;
-    link.download = 'ubersnap-'+Date().toString()+'.png'; // File name for download
+    link.download = 'ubersnap-'+ new Date().toLocaleDateString()+'.png'; // File name for download
     link.click();
   };
-
 
   return (
     <>
@@ -178,7 +177,12 @@ export default function Home() {
         <Label htmlFor="canvasInput">Select Image</Label>
         <div 
           className="flex flex-col w-full lg:max-w-sm justify-center my-4">
-          <Input id="canvasInput" type="file" placeholder="" onChange={onImageAttach} className="opacity-0 w-[300px] h-[300px] absolute text-white" />
+          <Input 
+            id="canvasInput" 
+            type="file" 
+            onChange={onImageAttach} 
+            className="opacity-0 w-[300px] h-[300px] absolute" 
+            />
           <Image 
             id="imageSrc" 
             ref={imageRef} 
@@ -190,7 +194,7 @@ export default function Home() {
             onLoad={handleImageLoad} 
           />
         </div>
-        <Button variant='outline' onClick={onNextButton}>Next →</Button>
+        <Button variant='outline' onClick={onNextButton}>Next</Button>
       </div>
 
       {/* mode edit */}
@@ -206,19 +210,23 @@ export default function Home() {
               className="rounded-xl self-center w-[300px] h-[300px]"
               onMouseDown={(e) => isCrop && handleMouseDown(e)}
               onMouseMove={(e) => isCrop && handleMouseMove(e)}
-              onMouseUp={(e) => isCrop && handleMouseUp(e)}></canvas>
+              onMouseUp={() => isCrop && handleMouseUp()}></canvas>
           </div>
 
           {/* effect list */}
           <div className="flex flex-row items-center gap-2">
-            {
-              filters?.map(item => (
+            {filters?.map(item => (
                 <div key={item.id} onClick={() => onChangeEffect(item)} className="cursor-pointer">
-                  <Image src={item.picture} alt={item.effect} width={50} height={50} className={`rounded-xl p-1 border-2 ${item.effect === 'blur' && 'blur-sm'} ${item.effect === 'brighter' && 'brightness-150'} ${item.effect === selectedFilter ? 'border-red-400' : 'border-gray'}`} />
+                  <Image 
+                    src={item.picture} 
+                    alt={item.effect} 
+                    width={50} 
+                    height={50} 
+                    className={`rounded-xl p-1 border-2 ${item.effect === 'blur' && 'blur-sm'} ${item.effect === 'brighter' && 'brightness-150'} ${item.effect === selectedFilter ? 'border-red-400' : 'border-gray'}`} 
+                  />
                   <Label>{item.text}</Label>
                 </div>
-              ))
-            }
+            ))}
           </div>
           <div className="my-3">
             <div className="flex flex-row items-center gap-3">
@@ -241,7 +249,7 @@ export default function Home() {
             )}
           </div>
           <div className="flex flex-row gap-2 w-full">
-            <Button variant='outline' className="flex flex-1" onClick={() => setCurrentPage('default')}>← Back</Button>
+            <Button variant='outline' className="flex flex-1" onClick={() => setCurrentPage('default')}>Back</Button>
             <Button variant='default' className="flex flex-1" onClick={downloadImage}>Submit</Button>
           </div>
         </div>
