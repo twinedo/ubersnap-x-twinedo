@@ -26,7 +26,13 @@ export default function Home() {
 
   const onImageAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files as FileList;
-    setImageInputSource(URL.createObjectURL(file?.[0]))
+    console.log(file[0].size) //bytes
+    if (file[0].size > 2000000) { // not more than 2mb
+      alert('Please upload image less than 2mb')
+    } else {
+      setImageInputSource(URL.createObjectURL(file?.[0]))
+    }
+
   }
 
   const [selectedFilter, setSelectedFilter] = useState<'no-effect' | 'blur' | 'brighter'>('no-effect');
