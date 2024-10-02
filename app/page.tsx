@@ -2,6 +2,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import Image from "next/image";
 import { useCallback, useMemo, useRef, useState } from "react";
 import Footer from "@/components/ui/footer";
@@ -16,6 +17,10 @@ export default function Home() {
 
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isCropping, setIsCropping] = useState(false);
+  const [cropRect, setCropRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [isCrop, setIsCrop] = useState<boolean>(false);
+  const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
 
   const [currentPage, setCurrentPage] = useState<'default' | 'edit'>('default')
 
@@ -64,7 +69,7 @@ export default function Home() {
   const onChangeEffect = (item: TFilterItem) => {
     let mat = cv.imread(canvasRef.current!);
     let dst = new cv.Mat();
-  
+
     // Reset to default if the same filter is selected
     if (selectedFilter === item.effect) {
       setSelectedFilter('no-effect');
@@ -73,30 +78,93 @@ export default function Home() {
       dst.delete();
       return;
     }
-  
+
     // Apply the effect based on the selected filter
     switch (item.effect) {
       case 'blur':
         setSelectedFilter(item.effect);
         blurImage(mat, dst, 5);
         break;
-  
+
       case 'brighter':
         setSelectedFilter(item.effect);
         brightening(mat, dst, 2);
         break;
-  
+
       default:
         setSelectedFilter('no-effect');
         handleImageLoad();
         break;
     }
-  
+
     cv.imshow(canvasRef.current!, dst);
     mat.delete();
     dst.delete();
   };
-  
+
+  // Start cropping when mouse is pressed
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    setStartPoint({ x: e.clientX - rect!.left, y: e.clientY - rect!.top });
+    setIsCropping(true);
+  };
+
+  // Track the mouse movement and update the crop rectangle
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isCropping || !startPoint || !canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const currentX = e.clientX - rect.left;
+    const currentY = e.clientY - rect.top;
+
+    const width = currentX - startPoint.x;
+    const height = currentY - startPoint.y;
+
+    setCropRect({ x: startPoint.x, y: startPoint.y, width, height });
+  };
+
+  // Apply the crop on mouse release
+  const handleMouseUp = () => {
+    setIsCropping(false);
+    cropImage();
+  };
+
+  // Function to crop the image using OpenCV.js
+  const cropImage = () => {
+    if (!cropRect || !imageRef.current || !canvasRef.current) return;
+
+    const imgElement = imageRef.current;
+    const canvas = canvasRef.current;
+
+    // Read the image into OpenCV matrix
+    let mat = cv.imread(imgElement);
+
+    // Create a rectangle for cropping
+    let rect = new cv.Rect(
+      Math.max(0, cropRect.x),
+      Math.max(0, cropRect.y),
+      Math.abs(cropRect.width),
+      Math.abs(cropRect.height)
+    );
+
+    // Apply the ROI (Region of Interest) to crop the image
+    let cropped = mat.roi(rect);
+
+    // Display the cropped image on the canvas
+    cv.imshow(canvas, cropped);
+
+    // Clean up
+    cropped.delete();
+    mat.delete();
+  };
+
+  const onCheckCrop = (checked: boolean) => {
+    if (!checked) {
+      handleImageLoad()
+    }
+    setIsCrop(checked)
+  }
+
 
   return (
     <>
@@ -112,10 +180,18 @@ export default function Home() {
 
       {/* mode edit */}
       {currentPage === 'edit' && (
-        <div className="flex flex-col w-full lg:max-w-sm justify-center gap-1.5">
+        <div className="flex flex-col w-full lg:max-w-sm justify-center gap-1.5 relative">
           <Label htmlFor="canvasInput">Preview Image</Label>
-          <div className="flex flex-col w-full lg:max-w-sm justify-center my-4">
-            <canvas id="canvasOutput" ref={canvasRef} height="300" width="300" className="rounded-xl self-center w-[300px] h-[300px]"></canvas>
+          <div className="flex flex-col w-full lg:max-w-sm justify-center my-4 relative">
+            <canvas
+              id="canvasOutput"
+              ref={canvasRef}
+              height="300"
+              width="300"
+              className="rounded-xl self-center w-[300px] h-[300px]"
+              onMouseDown={(e) => isCrop && handleMouseDown(e)}
+              onMouseMove={(e) => isCrop && handleMouseMove(e)}
+              onMouseUp={(e) => isCrop && handleMouseUp(e)}></canvas>
           </div>
 
           {/* effect list */}
@@ -129,8 +205,25 @@ export default function Home() {
               ))
             }
           </div>
-          <div>
-            <Label>Crop</Label>
+          <div className="my-3">
+            <div className="flex flex-row items-center gap-3">
+              <Label htmlFor="cropCheck">Crop</Label>
+              <Checkbox id="cropCheck" onCheckedChange={onCheckCrop} />
+            </div>
+            {/* Display the crop rectangle visually */}
+            {isCrop && cropRect && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: cropRect.x,
+                  top: cropRect.y,
+                  width: cropRect.width,
+                  height: cropRect.height,
+                  border: '2px dashed red',
+                  pointerEvents: 'none',
+                }}
+              ></div>
+            )}
           </div>
           <div className="flex flex-row gap-2 w-full">
             <Button variant='outline' className="flex flex-1" onClick={() => setCurrentPage('default')}>← Back</Button>
