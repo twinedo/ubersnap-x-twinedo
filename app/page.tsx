@@ -7,7 +7,9 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import Footer from "@/components/ui/footer";
 import noImage from '@/assets/no-image.svg';
 import icDefault from '@/assets/ic-default.png';
-import cv from "@techstark/opencv-js"
+import cv, { ImageData, Mat } from "@techstark/opencv-js"
+import { TFilterItem } from "./page.type";
+import { blurImage, brightening } from "@/lib/utils";
 
 export default function Home() {
   const [imageInputSource, setImageInputSource] = useState<string>('')
@@ -22,7 +24,7 @@ export default function Home() {
     setImageInputSource(URL.createObjectURL(file?.[0]))
   }
 
-  const [selectedFilter, setSelectedFilter] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState<'no-effect' | 'blur' | 'brighter'>('no-effect');
   const filters = useMemo(() => [
     {
       id: '1',
@@ -42,7 +44,7 @@ export default function Home() {
       effect: 'brighter',
       picture: imageInputSource
     },
-  ], [imageInputSource])
+  ] as TFilterItem[], [imageInputSource])
 
   const handleImageLoad = useCallback(() => {
     if (imageInputSource.length > 0 && imageRef.current && canvasRef.current) {
@@ -59,6 +61,43 @@ export default function Home() {
     }, 200);
   }, [handleImageLoad])
 
+  const onChangeEffect = (item: TFilterItem) => {
+    let mat = cv.imread(canvasRef.current!);
+    let dst = new cv.Mat();
+  
+    // Reset to default if the same filter is selected
+    if (selectedFilter === item.effect) {
+      setSelectedFilter('no-effect');
+      handleImageLoad();
+      mat.delete();
+      dst.delete();
+      return;
+    }
+  
+    // Apply the effect based on the selected filter
+    switch (item.effect) {
+      case 'blur':
+        setSelectedFilter(item.effect);
+        blurImage(mat, dst, 5);
+        break;
+  
+      case 'brighter':
+        setSelectedFilter(item.effect);
+        brightening(mat, dst, 2);
+        break;
+  
+      default:
+        setSelectedFilter('no-effect');
+        handleImageLoad();
+        break;
+    }
+  
+    cv.imshow(canvasRef.current!, dst);
+    mat.delete();
+    dst.delete();
+  };
+  
+
   return (
     <>
       <Label className="text-bold">Welcome to Ubersnap</Label>
@@ -70,18 +109,21 @@ export default function Home() {
         </div>
         <Button variant='outline' onClick={onNextButton}>Next →</Button>
       </div>
-      {currentPage === 'edit' && (
 
+      {/* mode edit */}
+      {currentPage === 'edit' && (
         <div className="flex flex-col w-full lg:max-w-sm justify-center gap-1.5">
           <Label htmlFor="canvasInput">Preview Image</Label>
           <div className="flex flex-col w-full lg:max-w-sm justify-center my-4">
             <canvas id="canvasOutput" ref={canvasRef} height="300" width="300" className="rounded-xl self-center w-[300px] h-[300px]"></canvas>
           </div>
+
+          {/* effect list */}
           <div className="flex flex-row items-center gap-2">
             {
               filters?.map(item => (
-                <div key={item.id} onClick={() => selectedFilter === item.id ? setSelectedFilter('') : setSelectedFilter(item.id)} className="cursor-pointer">
-                  <Image src={item.picture} alt={item.id} width={50} height={50} className={`rounded-xl p-1 border-2 ${item.id === selectedFilter ? 'border-red-400' : 'border-gray'}`} />
+                <div key={item.id} onClick={() => onChangeEffect(item)} className="cursor-pointer">
+                  <Image src={item.picture} alt={item.effect} width={50} height={50} className={`rounded-xl p-1 border-2 ${item.effect === 'blur' && 'blur-sm'} ${item.effect === 'brighter' && 'brightness-150'} ${item.effect === selectedFilter ? 'border-red-400' : 'border-gray'}`} />
                   <Label>{item.text}</Label>
                 </div>
               ))
