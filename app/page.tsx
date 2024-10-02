@@ -9,53 +9,54 @@ import Footer from "@/components/ui/footer";
 import noImage from '@/assets/no-image.svg';
 import icDefault from '@/assets/ic-default.png';
 import cv from "@techstark/opencv-js"
-import { TFilterItem } from "./page.type";
+import type { TCropRect, TFilterItem, TStartPoint } from "@/types";
 import { blurImage, brightening } from "@/lib/utils";
+import { ECurrentPage, EFilter } from "@/types/enums";
+import { DefaultValues, maxImageSize, maxImageSizeText } from "@/types/const";
 
 export default function Home() {
-  const [imageInputSource, setImageInputSource] = useState<string>('')
-
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const [imageInputSource, setImageInputSource] = useState<string>(DefaultValues.STRING)
+  const [cropRect, setCropRect] = useState<TCropRect | null>(null);
   const [isCropping, setIsCropping] = useState(false);
-  const [cropRect, setCropRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const [isCrop, setIsCrop] = useState<boolean>(false);
-  const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
+  const [isCropChecked, setIsCropChecked] = useState<boolean>(false);
+  const [startPoint, setStartPoint] = useState<TStartPoint | null>(null);
+  const [currentPage, setCurrentPage] = useState<ECurrentPage.DEFAULT | ECurrentPage.EDIT>(ECurrentPage.DEFAULT);
+  const [selectedFilter, setSelectedFilter] = useState<EFilter.NO_EFFECT | EFilter.BLUR | EFilter.BRIGHTER>(EFilter.NO_EFFECT);
 
-  const [currentPage, setCurrentPage] = useState<'default' | 'edit'>('default')
-
-  const onImageAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files as FileList;
-    console.log(file[0].size) //bytes
-    if (file[0].size > 2000000) { // not more than 2mb
-      alert('Please upload image less than 2mb')
-    } else {
-      setImageInputSource(URL.createObjectURL(file?.[0]))
-    }
-
-  }
-
-  const [selectedFilter, setSelectedFilter] = useState<'no-effect' | 'blur' | 'brighter'>('no-effect');
   const filters = useMemo(() => [
     {
       id: '1',
       text: 'Default',
-      effect: 'no-effect',
+      effect: EFilter.NO_EFFECT,
       picture: icDefault
     },
     {
       id: '2',
       text: 'Blur',
-      effect: 'blur',
+      effect: EFilter.BLUR,
       picture: imageInputSource
     },
     {
       id: '3',
       text: 'Brighter',
-      effect: 'brighter',
+      effect: EFilter.BRIGHTER,
       picture: imageInputSource
     },
   ] as TFilterItem[], [imageInputSource])
+
+  // on attach image
+  const onImageAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files as FileList;
+    console.log(file[0].size) //bytes
+    if (file[0].size > maxImageSize) { // not more than 2mb
+      alert(maxImageSizeText)
+    } else {
+      setImageInputSource(URL.createObjectURL(file?.[0]))
+    }
+  }
 
   const handleImageLoad = useCallback(() => {
     if (imageInputSource.length > 0 && imageRef.current && canvasRef.current) {
@@ -66,19 +67,20 @@ export default function Home() {
   }, [imageInputSource]);
 
   const onNextButton = useCallback(() => {
-    setCurrentPage('edit')
+    setCurrentPage(ECurrentPage.EDIT)
     setTimeout(() => {
       handleImageLoad();
     }, 200);
   }, [handleImageLoad])
 
+  // Apply Effect
   const onChangeEffect = (item: TFilterItem) => {
     let mat = cv.imread(canvasRef.current!);
     let dst = new cv.Mat();
 
-    // Reset to default if the same filter is selected
+    // Reset to default
     if (selectedFilter === item.effect) {
-      setSelectedFilter('no-effect');
+      setSelectedFilter(EFilter.NO_EFFECT);
       handleImageLoad();
       mat.delete();
       dst.delete();
@@ -87,18 +89,18 @@ export default function Home() {
 
     // Apply the effect based on the selected filter
     switch (item.effect) {
-      case 'blur':
-        setSelectedFilter(item.effect);
+      case EFilter.BLUR:
+        setSelectedFilter(EFilter.BLUR);
         blurImage(mat, dst, 5);
         break;
 
-      case 'brighter':
-        setSelectedFilter(item.effect);
+      case EFilter.BRIGHTER:
+        setSelectedFilter(EFilter.BRIGHTER);
         brightening(mat, dst, 2);
         break;
 
       default:
-        setSelectedFilter('no-effect');
+        setSelectedFilter(EFilter.NO_EFFECT);
         handleImageLoad();
         break;
     }
@@ -159,11 +161,12 @@ export default function Home() {
     mat.delete();
   };
 
+  // Function to check crop
   const onCheckCrop = (checked: boolean) => {
     if (!checked) {
       handleImageLoad()
     }
-    setIsCrop(checked)
+    setIsCropChecked(checked)
   }
 
   // Function to download
@@ -172,7 +175,7 @@ export default function Home() {
     const dataURL = canvasRef.current.toDataURL('image/png');
     const link = document.createElement('a');
     link.href = dataURL;
-    link.download = 'ubersnap-'+ new Date().toLocaleDateString()+'.png'; // File name for download
+    link.download = 'ubersnap-' + new Date().toLocaleDateString() + '.png'; // File name for download
     link.click();
   };
 
@@ -181,24 +184,24 @@ export default function Home() {
       <Label className="text-bold">Welcome to Ubersnap</Label>
       <div className="flex flex-col w-full lg:max-w-sm justify-center gap-1.5">
         <Label htmlFor="canvasInput">Select Image</Label>
-        <div 
+        <div
           className="flex flex-col w-full lg:max-w-sm justify-center my-4">
-          <Input 
-            id="canvasInput" 
-            type="file" 
-            onChange={onImageAttach} 
-            className="opacity-0 w-[300px] h-[300px] absolute" 
-            />
-          <Image 
+          <Input
+            id="canvasInput"
+            type="file"
+            onChange={onImageAttach}
+            className="opacity-0 w-[300px] h-[300px] absolute"
+          />
+          <Image
             priority
-            id="imageSrc" 
-            ref={imageRef} 
-            src={imageInputSource.length === 0 ? noImage : imageInputSource} 
-            alt="input-img" 
-            width={300} 
-            height={300} 
-            className="rounded-xl self-center" 
-            onLoad={handleImageLoad} 
+            id="imageSrc"
+            ref={imageRef}
+            src={imageInputSource.length === 0 ? noImage : imageInputSource}
+            alt="input-img"
+            width={300}
+            height={300}
+            className="rounded-xl self-center"
+            onLoad={handleImageLoad}
           />
         </div>
         <Button variant='outline' onClick={onNextButton}>Next</Button>
@@ -215,24 +218,24 @@ export default function Home() {
               height="300"
               width="300"
               className="rounded-xl self-center w-[300px] h-[300px]"
-              onMouseDown={(e) => isCrop && handleMouseDown(e)}
-              onMouseMove={(e) => isCrop && handleMouseMove(e)}
-              onMouseUp={() => isCrop && handleMouseUp()}></canvas>
+              onMouseDown={(e) => isCropChecked && handleMouseDown(e)}
+              onMouseMove={(e) => isCropChecked && handleMouseMove(e)}
+              onMouseUp={() => isCropChecked && handleMouseUp()}></canvas>
           </div>
 
           {/* effect list */}
           <div className="flex flex-row items-center gap-2">
             {filters?.map(item => (
-                <div key={item.id} onClick={() => onChangeEffect(item)} className="cursor-pointer">
-                  <Image 
-                    src={item.picture} 
-                    alt={item.effect} 
-                    width={50} 
-                    height={50} 
-                    className={`rounded-xl p-1 border-2 ${item.effect === 'blur' && 'blur-sm'} ${item.effect === 'brighter' && 'brightness-150'} ${item.effect === selectedFilter ? 'border-red-400' : 'border-gray'}`} 
-                  />
-                  <Label>{item.text}</Label>
-                </div>
+              <div key={item.id} onClick={() => onChangeEffect(item)} className="cursor-pointer">
+                <Image
+                  src={item.picture}
+                  alt={item.effect}
+                  width={50}
+                  height={50}
+                  className={`rounded-xl p-1 border-2 ${item.effect === EFilter.BLUR && 'blur-sm'} ${item.effect === EFilter.BRIGHTER && 'brightness-150'} ${item.effect === selectedFilter ? 'border-red-400' : 'border-gray'}`}
+                />
+                <Label>{item.text}</Label>
+              </div>
             ))}
           </div>
           <div className="my-3">
@@ -241,7 +244,7 @@ export default function Home() {
               <Checkbox id="cropCheck" onCheckedChange={onCheckCrop} />
             </div>
             {/* Display the crop rectangle visually */}
-            {isCrop && cropRect && (
+            {isCropChecked && cropRect && (
               <div
                 style={{
                   position: 'absolute',
@@ -256,7 +259,7 @@ export default function Home() {
             )}
           </div>
           <div className="flex flex-row gap-2 w-full">
-            <Button variant='outline' className="flex flex-1" onClick={() => setCurrentPage('default')}>Back</Button>
+            <Button variant='outline' className="flex flex-1" onClick={() => setCurrentPage(ECurrentPage.DEFAULT)}>Back</Button>
             <Button variant='default' className="flex flex-1" onClick={downloadImage}>Submit</Button>
           </div>
         </div>
